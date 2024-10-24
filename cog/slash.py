@@ -116,5 +116,29 @@ class slash(commands.Cog):
         ).add_field(name="マップ", value=random.choice(self.map)
         ).add_field(name="ゲームモード", value=random.choice(self.gamemode)), view=reget(self, interaction.user.id))
 
+    @app_commands.command(name="shorten", description="URLを短縮します")
+    @app_commands.describe(url="短縮するURL")
+    async def shorten(self, interaction:discord.Interaction, url:str):
+        if not url.startswith("http"):
+            await interaction.response.send_message("URLが不正です",ephemeral=True)
+            return
+        headers = {
+            "Content-Type":"application/json"
+        }
+        data = {
+            "url":url
+        }
+        await interaction.response.defer(ephemeral=True) # bot is thinking...🤔
+        try:
+            response = requests.post("https://st.shizen.lol/shorten",json=data, headers=headers, timeout=(3.0, 5.0))
+        except requests.exceptions.Timeout:
+            await interaction.followup.send("APIサーバーへのアクセスがタイムアウトしました。",ephemeral=True)
+        if response.status_code != 200:
+            await interaction.followup.send(f"エラーが発生しました。\nエラー: {'APIサーバーがダウンしています。' if response.status_code == 502 else 'APIサーバー内でエラーが発生しました。'}",ephemeral=True)
+            return
+        else:
+            await interaction.followup.send(f'リンクを生成しました！\n{response.json()["url"]}',
+            view=discord.ui.View().add_item(discord.ui.Button(label="飛んでみる！",url=response.json()['url'], style=discord.ButtonStyle)),ephemeral=True)
+
 async def setup(bot: commands.Bot):
   await bot.add_cog(slash(bot))
